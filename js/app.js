@@ -289,7 +289,7 @@ btnConsultar.addEventListener("click", async () => {
         valorFiltro = prov;
         tituloPopup = `Provincia: ${prov}`;
     } else {
-        archivosAPescar = ["data/departamentos.geojson"];
+        archivosAPescar = ["departamentos.geojson"];
         propiedadFiltro = "DEPARTAMEN";
         valorFiltro = dep;
         tituloPopup = `Departamento: ${dep}`;
