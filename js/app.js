@@ -267,23 +267,23 @@ btnConsultar.addEventListener("click", async () => {
 
     if (dist && dist !== "Seleccione...") {
         archivosAPescar = [
-            "data/distrito1.geojson", 
-            "data/distrito2.geojson", 
-            "data/distrito3.geojson", 
-            "data/distrito4.geojson", 
-            "data/distrito5.geojson", 
-            "data/distrito6.geojson",
-            "data/distrito7.geojson"
+            "distrito1.geojson", 
+            "distrito2.geojson", 
+            "distrito3.geojson", 
+            "distrito4.geojson", 
+            "distrito5.geojson", 
+            "distrito6.geojson",
+            "distrito7.geojson"
         ];
         propiedadFiltro = "DISTRITO";
         valorFiltro = dist;
         tituloPopup = `Distrito: ${dist}`;
     } else if (prov && prov !== "Seleccione...") {
         archivosAPescar = [
-            "data/provincia1.geojson",
-            "data/provincia2.geojson",
-            "data/provincia3.geojson",
-            "data/provincia4.geojson"
+            "provincia1.geojson",
+            "provincia2.geojson",
+            "provincia3.geojson",
+            "provincia4.geojson"
         ];
         propiedadFiltro = "PROVINCIA";
         valorFiltro = prov;
