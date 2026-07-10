@@ -114,11 +114,11 @@ window.onload = () => {
 
 function actualizarIndicesPorObjetivo() {
     const objSeleccionado = objetivo.value;
-    const listaIndices = indicesPorObjetivo[objSeleccionado] || [];
+    const listaindices = indicesPorObjetivo[objSeleccionado] || [];
 
     indice.innerHTML = "";
 
-    listaIndices.forEach(ind => {
+    listaindices.forEach(ind => {
         let opt = document.createElement("option");
         opt.value = ind;
         opt.textContent = ind;
@@ -261,7 +261,7 @@ btnConsultar.addEventListener("click", async () => {
     if (capaSatelitalGEE && map.hasLayer(capaSatelitalGEE)) map.removeLayer(capaSatelitalGEE);
 
     let archivosAPescar = [];
-    let propiedadFiltro = "";
+    let nivelFiltro = ""; // Guardará si es DEP, PROV o DIST para flexibilizar la lectura
     let valorFiltro = "";
     let tituloPopup = "";
 
@@ -275,7 +275,7 @@ btnConsultar.addEventListener("click", async () => {
             "distrito6.geojson",
             "distrito7.geojson"
         ];
-        propiedadFiltro = "DISTRITO";
+        nivelFiltro = "DISTRITO";
         valorFiltro = dist;
         tituloPopup = `Distrito: ${dist}`;
     } else if (prov && prov !== "Seleccione...") {
@@ -285,12 +285,12 @@ btnConsultar.addEventListener("click", async () => {
             "provincia3.geojson",
             "provincia4.geojson"
         ];
-        propiedadFiltro = "PROVINCIA";
+        nivelFiltro = "PROVINCIA";
         valorFiltro = prov;
         tituloPopup = `Provincia: ${prov}`;
     } else {
         archivosAPescar = ["departamentos.geojson"];
-        propiedadFiltro = "DEPARTAMEN";
+        nivelFiltro = "DEPARTAMENTO";
         valorFiltro = dep;
         tituloPopup = `Departamento: ${dep}`;
     }
@@ -313,8 +313,31 @@ btnConsultar.addEventListener("click", async () => {
 
             const filtradosEnParte = geojsonData.features.filter(f => {
                 if (!f.properties) return false;
-                const textoPropiedad = normalizarTexto(f.properties[propiedadFiltro]);
-                const textoDepartamento = normalizarTexto(f.properties["DEPARTAMEN"]);
+
+                // --- SISTEMA TOLERANTE AUTOMÁTICO DE ATRIBUTOS ---
+                // Lee dinámicamente nombres completos, abreviados o con prefijos de QGIS/INEI
+                let propLugar = f.properties[nivelFiltro] || 
+                                f.properties[nivelFiltro.substring(0, 9)] || // Ej: DEPARTAMEN en lugar de DEPARTAMENTO
+                                f.properties[`NOM_${nivelFiltro.substring(0, 4)}`] || // Ej: NOM_PROV, NOM_DIST
+                                f.properties[`NOMB${nivelFiltro.substring(0, 3)}`] || // Ej: NOMBDIST
+                                f.properties["NOM_CAP"] || 
+                                "";
+
+                let propDep = f.properties["DEPARTAMEN"] || 
+                              f.properties["DEPARTAMENTO"] || 
+                              f.properties["NOM_DEP"] || 
+                              f.properties["NOMDEP"] || 
+                              "";
+
+                const textoPropiedad = normalizarTexto(propLugar);
+                const textoDepartamento = normalizarTexto(propDep);
+
+                // Si buscamos solo a nivel de región/departamento completo
+                if (nivelFiltro === "DEPARTAMENTO") {
+                    return textoPropiedad === valorBuscadoNormalizado || textoDepartamento === depBuscadoNormalizado;
+                }
+
+                // Si buscamos provincia/distrito, debe validar que esté dentro de la región seleccionada
                 return textoPropiedad === valorBuscadoNormalizado && textoDepartamento === depBuscadoNormalizado;
             });
 
@@ -325,7 +348,7 @@ btnConsultar.addEventListener("click", async () => {
         }
 
         if (featuresFiltrados.length === 0) {
-            alert(`Límites geométricos no encontrados en ninguna de las partes del sistema para: ${valorFiltro} (${dep}).`);
+            alert(`Límites geométricos no encontrados en ninguna de las partes del sistema para: ${valorFiltro} (${dep}). Revisa los atributos internos de tus archivos GeoJSON.`);
             if (loader) loader.style.display = "none";
             return;
         }
@@ -386,8 +409,7 @@ btnConsultar.addEventListener("click", async () => {
         console.error(error);
         alert("Error de red o procesamiento con servidores GEE.");
         generarResultadosManejoFallas();
-    } finally {
-        // Apaga el loader en el envío de consultas si falla o si termina con éxito
+    } toggleLoader: {
         if (loader) loader.style.display = "none";
     }
 });
