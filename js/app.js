@@ -89,23 +89,21 @@ const limitesSatelites = {
 ==========================*/
 
 window.onload = () => {
-    // Encapsulamos la carga inicial en un bloque seguro para evitar bloqueos infinitos de la pantalla
     try {
-        cargarDepartamentosReal(); // Carga la data real de forma segura de ubigeo.js
-        actualizarIndicesPorObjetivo(); // Ejecución inicial del filtro de índices espectrales
-        validarYFiltrarAniosPorSatelite(); // Filtra los años válidos basándose en el satélite inicial
+        cargarDepartamentosReal(); 
+        actualizarIndicesPorObjetivo(); 
+        validarYFiltrarAniosPorSatelite(); 
     } catch (error) {
         console.error("⚠️ Error controlado en inicialización de recursos:", error);
     } finally {
-        // Oculta la pantalla de carga pase lo que pase, garantizando la visibilidad del sistema
         const loader = document.getElementById("loader");
         if (loader) {
             loader.style.display = "none";
         }
     }
 
-    setTimeout(() => { map.invalidateSize(); }, 400); // Forzar a Leaflet a recalcular dimensiones
-    console.log("GeoSpatial Perú inicializado con Layout corregido y candados cronológicos.");
+    setTimeout(() => { map.invalidateSize(); }, 400); 
+    console.log("GeoSpatial Perú inicializado correctamente.");
 };
 
 /*==================================================
@@ -126,7 +124,6 @@ function actualizarIndicesPorObjetivo() {
     });
 }
 
-// Escuchar cambios en el selector de objetivos para actualizar el selector de índices
 objetivo.addEventListener("change", actualizarIndicesPorObjetivo);
 
 /*==================================================
@@ -137,7 +134,6 @@ function validarYFiltrarAniosPorSatelite() {
     const satSeleccionado = satelite.value;
     const rango = limitesSatelites[satSeleccionado] || { min: 1985, max: 2026, def: 2020 };
 
-    // Guardar selecciones previas para intentar mantener la persistencia si entra en el rango
     const valorPrevioIni = parseInt(anioInicio.value);
     const valorPrevioFin = parseInt(anioFinal.value);
 
@@ -154,7 +150,6 @@ function validarYFiltrarAniosPorSatelite() {
         anioFinal.appendChild(opt2);
     }
 
-    // Asignar el año por defecto seguro del satélite o mantener el previo si es compatible
     if (valorPrevioIni >= rango.min && valorPrevioIni <= rango.max) {
         anioInicio.value = valorPrevioIni;
     } else {
@@ -168,7 +163,6 @@ function validarYFiltrarAniosPorSatelite() {
     }
 }
 
-// Monitorear el cambio de sensor satelital para actualizar las restricciones temporales de inmediato
 satelite.addEventListener("change", validarYFiltrarAniosPorSatelite);
 
 
@@ -252,7 +246,6 @@ btnConsultar.addEventListener("click", async () => {
         return;
     }
 
-    // Encendemos el loader dinámico para procesos de teledetección pesados
     const loader = document.getElementById("loader");
     if (loader) loader.style.display = "flex";
 
@@ -261,35 +254,35 @@ btnConsultar.addEventListener("click", async () => {
     if (capaSatelitalGEE && map.hasLayer(capaSatelitalGEE)) map.removeLayer(capaSatelitalGEE);
 
     let archivosAPescar = [];
-    let nivelFiltro = ""; // Guardará si es DEP, PROV o DIST para flexibilizar la lectura
+    let nivelFiltro = ""; 
     let valorFiltro = "";
     let tituloPopup = "";
 
     if (dist && dist !== "Seleccione...") {
         archivosAPescar = [
-            "distrito1.geojson", 
-            "distrito2.geojson", 
-            "distrito3.geojson", 
-            "distrito4.geojson", 
-            "distrito5.geojson", 
-            "distrito6.geojson",
-            "distrito7.geojson"
+            "./distrito1.geojson", 
+            "./distrito2.geojson", 
+            "./distrito3.geojson", 
+            "./distrito4.geojson", 
+            "./distrito5.geojson", 
+            "./distrito6.geojson",
+            "./distrito7.geojson"
         ];
         nivelFiltro = "DISTRITO";
         valorFiltro = dist;
         tituloPopup = `Distrito: ${dist}`;
     } else if (prov && prov !== "Seleccione...") {
         archivosAPescar = [
-            "provincia1.geojson",
-            "provincia2.geojson",
-            "provincia3.geojson",
-            "provincia4.geojson"
+            "./provincia1.geojson",
+            "./provincia2.geojson",
+            "./provincia3.geojson",
+            "./provincia4.geojson"
         ];
         nivelFiltro = "PROVINCIA";
         valorFiltro = prov;
         tituloPopup = `Provincia: ${prov}`;
     } else {
-        archivosAPescar = ["departamentos.geojson"];
+        archivosAPescar = ["./departamentos.geojson"];
         nivelFiltro = "DEPARTAMENTO";
         valorFiltro = dep;
         tituloPopup = `Departamento: ${dep}`;
@@ -314,12 +307,11 @@ btnConsultar.addEventListener("click", async () => {
             const filtradosEnParte = geojsonData.features.filter(f => {
                 if (!f.properties) return false;
 
-                // --- SISTEMA TOLERANTE AUTOMÁTICO DE ATRIBUTOS ---
-                // Lee dinámicamente nombres completos, abreviados o con prefijos de QGIS/INEI
+                // Mapeo tolerante inteligente para nombres de columnas
                 let propLugar = f.properties[nivelFiltro] || 
-                                f.properties[nivelFiltro.substring(0, 9)] || // Ej: DEPARTAMEN en lugar de DEPARTAMENTO
-                                f.properties[`NOM_${nivelFiltro.substring(0, 4)}`] || // Ej: NOM_PROV, NOM_DIST
-                                f.properties[`NOMB${nivelFiltro.substring(0, 3)}`] || // Ej: NOMBDIST
+                                f.properties[nivelFiltro.substring(0, 9)] || 
+                                f.properties[`NOM_${nivelFiltro.substring(0, 4)}`] || 
+                                f.properties[`NOMB${nivelFiltro.substring(0, 3)}`] || 
                                 f.properties["NOM_CAP"] || 
                                 "";
 
@@ -332,12 +324,10 @@ btnConsultar.addEventListener("click", async () => {
                 const textoPropiedad = normalizarTexto(propLugar);
                 const textoDepartamento = normalizarTexto(propDep);
 
-                // Si buscamos solo a nivel de región/departamento completo
                 if (nivelFiltro === "DEPARTAMENTO") {
                     return textoPropiedad === valorBuscadoNormalizado || textoDepartamento === depBuscadoNormalizado;
                 }
 
-                // Si buscamos provincia/distrito, debe validar que esté dentro de la región seleccionada
                 return textoPropiedad === valorBuscadoNormalizado && textoDepartamento === depBuscadoNormalizado;
             });
 
@@ -348,8 +338,7 @@ btnConsultar.addEventListener("click", async () => {
         }
 
         if (featuresFiltrados.length === 0) {
-            alert(`Límites geométricos no encontrados en ninguna de las partes del sistema para: ${valorFiltro} (${dep}). Revisa los atributos internos de tus archivos GeoJSON.`);
-            if (loader) loader.style.display = "none";
+            alert(`Límites geométricos no encontrados para: ${valorFiltro} (${dep}). Verifica que tus archivos GeoJSON estén en la raíz y contengan las propiedades espaciales.`);
             return;
         }
 
@@ -399,17 +388,17 @@ btnConsultar.addEventListener("click", async () => {
             valorMax.textContent = resultadoBackend.val_max || "0.000";
             valorMin.textContent = resultadoBackend.val_min || "0.000";
 
-            agregarTabla(dep, prov, dist, ind, anioIni, sat, resultadoBackend.area_km2 || "0");
+            agregarTabla(dep, prov, dist, ind, _anioIni = anioIni, sat, resultadoBackend.area_km2 || "0");
         } else {
             generarResultadosManejoFallas();
             agregarTabla(dep, prov, dist, ind, anioIni, sat, "Error GEE");
         }
 
     } catch (error) {
-        console.error(error);
+        console.error("Error en consulta:", error);
         alert("Error de red o procesamiento con servidores GEE.");
         generarResultadosManejoFallas();
-    } toggleLoader: {
+    } finally {
         if (loader) loader.style.display = "none";
     }
 });
