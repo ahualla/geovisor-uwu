@@ -366,13 +366,14 @@ btnConsultar.addEventListener("click", async () => {
         const geometryParaPython = featuresFiltrados[0].geometry;
         ultimaGeometriaConsultada = geometryParaPython;
 
-        // CORRECCIÓN CRÍTICA UNIFICADA: Se cambia 'año' por 'anio' para evitar fallas de codificación en Python
+        // ✔ SOLUCIÓN DE COMPATIBILIDAD CON PYDANTIC:
+        // Enviamos la propiedad con el alias "año" tal como lo definimos en 'main.py'
         const respuestaBackend = await fetch(`${BASE_URL_API_REAL}/calcular-indice-zona`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 indice: ind,
-                anio: parseInt(anioIni),
+                año: parseInt(anioIni), // Pydantic mapeará "año" a la variable interna segura
                 geometria: geometryParaPython
             })
         });
@@ -515,7 +516,7 @@ if (btnTiff) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     indice: indice.value,
-                    anio: parseInt(anioInicio.value),
+                    año: parseInt(anioInicio.value), // Corregido: "año" para coordinar con Pydantic
                     geometria: ultimaGeometriaConsultada
                 })
             });
@@ -523,7 +524,7 @@ if (btnTiff) {
             if (data.status === "success" && data.download_url) {
                 window.location.href = data.download_url;
             } else {
-                alert("❌ Error: " + data.message);
+                alert("❌ Error: " + (data.detail || data.message || "No se pudo generar la descarga"));
             }
         } catch (error) {
             alert("❌ Error conectando con el backend.");
@@ -537,7 +538,13 @@ if (btnShp) {
     btnShp.addEventListener("click", (e) => {
         e.preventDefault();
         if (departamento.value === "Seleccione...") return alert("⚠️ Realiza una consulta primero.");
-        window.location.href = `${BASE_URL_API_REAL}/descargar-shp?dep=${departamento.value}&prov=${provincia.value}&dist=${distrito.value}`;
+        
+        // Evitamos enviar strings basura como "Seleccione..." a los parámetros de la URL
+        const pDep = departamento.value;
+        const pProv = provincia.value === "Seleccione..." ? "" : provincia.value;
+        const pDist = distrito.value === "Seleccione..." ? "" : distrito.value;
+
+        window.location.href = `${BASE_URL_API_REAL}/descargar-shp?dep=${pDep}&prov=${pProv}&dist=${pDist}`;
     });
 }
 
@@ -572,15 +579,18 @@ if (btnPdf) {
         if (loader) loader.style.display = "flex";
 
         try {
+            const pProv = provincia.value === "Seleccione..." ? "" : provincia.value;
+            const pDist = distrito.value === "Seleccione..." ? "" : distrito.value;
+
             const response = await fetch(`${BASE_URL_API_REAL}/descargar-pdf`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     departamento: departamento.value,
-                    provincia: provincia.value,
-                    distrito: distrito.value,
+                    provincia: pProv,
+                    distrito: pDist,
                     indice: indice.value,
-                    anio: parseInt(anioInicio.value),
+                    año: parseInt(anioInicio.value), // Corregido: "año" para coordinar con Pydantic
                     satelite: satelite.value,
                     geometria: ultimaGeometriaConsultada
                 })
@@ -589,8 +599,10 @@ if (btnPdf) {
                 const blob = await response.blob();
                 const link = document.createElement("a");
                 link.href = window.URL.createObjectURL(blob);
-                link.download = `REPORTE_${indice.value}.pdf`;
+                link.download = `REPORTE_${indice.value}_${anioInicio.value}.pdf`;
                 link.click();
+            } else {
+                alert("❌ El servidor reportó un error al estructurar el reporte PDF.");
             }
         } catch (error) {
             alert("❌ Error al descargar el reporte PDF.");
