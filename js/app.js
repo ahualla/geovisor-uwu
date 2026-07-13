@@ -223,7 +223,7 @@ provincia.addEventListener('change', () => {
 /*=======================================================================
     SISTEMA DE ENLACE DE BACKEND (URL GLOBAL CONFIGURADA DE NGROK)
 =======================================================================*/
-const BASE_URL_API_REAL = "https://challenge-monastery-muzzle.ngrok-free.dev";
+const BASE_URL_API_REAL = "https://geovisor-uwu.onrender.com";
 
 /*==========================
     EVENTO CONSULTAR
