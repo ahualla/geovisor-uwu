@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, Any
 import ee
@@ -57,10 +58,6 @@ class ConsultaMapa(BaseModel):
     año: int
     geometria: Dict[str, Any]
 
-# ==============================================================================
-# El resto de tu código (obtener_imagen_por_año, calcular_todos_los_indices, 
-# obtener_paleta_y_rangos, y los endpoints de FastAPI) permanece exactamente IGUAL.
-# ==============================================================================
 
 # --- 1. PROCESADOR Y FILTRADOR DE COLECCIONES SATELITALES (NUBOSIDAD INTERNA AL 40%) ---
 def obtener_imagen_por_año(año, region_ee):
@@ -254,7 +251,7 @@ def procesar_mapa_zona(datos: ConsultaMapa):
         return {"status": "error", "message": str(e)}
 
 # ==============================================================================
-# --- 5. ENGINES ADICIONALES: ENDPOINTS INTEGRADOS PARA DESCARGAS aCIENTÍFICAS ---
+# --- 5. ENGINES ADICIONALES: ENDPOINTS INTEGRADOS PARA DESCARGAS CIENTÍFICAS ---
 # ==============================================================================
 
 # endpoint de descarga ráster de alta precisión (GeoTIFF nativo desde GEE)
@@ -296,13 +293,31 @@ def descargar_tiff_zona(datos: ConsultaMapa):
 # endpoint de fallback controlado para el despacho PNG científico (Si se requiere del backend)
 @app.get("/descargar-png")
 def descargar_png_estatico(indice: str, año: int, dist: str):
-    # Nota: Si usas el método dinámico por html2canvas integrado en tu app.js, 
-    # este endpoint funcionará de respaldo nativo si el navegador frena capturas CORS.
     return {
         "status": "success",
         "message": f"Petición de renderizado de imagen procesada para el distrito de {dist} en el índice {indice}."
     }
 
-@app.get("/")
+# ==============================================================================
+# --- 6. SERVICIO DE ARCHIVOS ESTÁTICOS (FRONTEND INTEGRADO) ---
+# ==============================================================================
+
+# Ruta raíz "/" que despacha directamente tu diseño visual
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {"status": "servidor_activo", "mensaje": "Geoportal Histórico Científico de Teledetección Activo"}
+    if os.path.exists("index.html"):
+        return FileResponse("index.html")
+    return """
+    <html>
+        <head><title>Geoportal Activo</title></head>
+        <body style="font-family: sans-serif; text-align: center; margin-top: 100px;">
+            <h1>✔ Servidor Backend Activo</h1>
+            <p>El backend de FastAPI está corriendo, pero no se encontró el archivo <b>index.html</b> en la raíz del proyecto.</p>
+            <p>Verifica que tus archivos HTML, CSS y JS estén subidos en la raíz de tu repositorio de GitHub.</p>
+        </body>
+    </html>
+    """
+
+# Montar los archivos estáticos para que busque el css/js/app.js en la raíz.
+# Al estar al final, FastAPI solo usará esta ruta si la petición no coincide con las rutas de arriba.
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
