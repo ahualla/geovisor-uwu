@@ -51,11 +51,26 @@ except Exception as e:
     print("❌ Error crítico de conexión inicial con Earth Engine:", str(e))
 
 
-# Esquema estricto de entrada de datos desde el Frontend (app.js)
+# Esquema flexible y robusto para evitar errores 422
+from pydantic import Field, field_validator
+
 class ConsultaMapa(BaseModel):
     indice: str
-    año: int
+    anio: Any = Field(None, alias="año")  # Soporta 'año' con ñ y 'anio' con n
     geometria: Dict[str, Any]
+
+    @field_validator('anio', mode='before')
+    @classmethod
+    def limpiar_anio(cls, v):
+        try:
+            return int(v)  # Si viene como "2024" (string), lo convierte a 2024 (int)
+        except (ValueError, TypeError):
+            raise ValueError("El año debe ser un número entero válido")
+
+    # Propiedad interna para que el resto del código que usa datos.año no falle
+    @property
+    def año(self) -> int:
+        return self.anio
 
 
 # --- 1. PROCESADOR Y FILTRADOR DE COLECCIONES SATELITALES (NUBOSIDAD INTERNA AL 40%) ---
