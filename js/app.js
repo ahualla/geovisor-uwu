@@ -221,7 +221,7 @@ provincia.addEventListener('change', () => {
 });
 
 /*=======================================================================
-    SISTEMA DE ENLACE DE BACKEND (URL GLOBAL CONFIGURADA DE NGROK)
+    SISTEMA DE ENLACE DE BACKEND (URL DE RENDER DETECTADA)
 =======================================================================*/
 const BASE_URL_API_REAL = "https://geovisor-uwu.onrender.com";
 
@@ -366,13 +366,13 @@ btnConsultar.addEventListener("click", async () => {
         const geometryParaPython = featuresFiltrados[0].geometry;
         ultimaGeometriaConsultada = geometryParaPython;
 
-        // CORREGIDO CORRECCIÓN CRÍTICA: Conectando directamente con el Servidor Ngrok global
+        // CORRECCIÓN CRÍTICA UNIFICADA: Se cambia 'año' por 'anio' para evitar fallas de codificación en Python
         const respuestaBackend = await fetch(`${BASE_URL_API_REAL}/calcular-indice-zona`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 indice: ind,
-                año: parseInt(anioIni),
+                anio: parseInt(anioIni),
                 geometria: geometryParaPython
             })
         });
@@ -393,7 +393,7 @@ btnConsultar.addEventListener("click", async () => {
             valorMax.textContent = resultadoBackend.val_max || "0.000";
             valorMin.textContent = resultadoBackend.val_min || "0.000";
 
-            agregarTabla(dep, prov, dist, ind, _anioIni = anioIni, sat, resultadoBackend.area_km2 || "0");
+            agregarTabla(dep, prov, dist, ind, anioIni, sat, resultadoBackend.area_km2 || "0");
         } else {
             generarResultadosManejoFallas();
             agregarTabla(dep, prov, dist, ind, anioIni, sat, "Error GEE");
@@ -515,7 +515,7 @@ if (btnTiff) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     indice: indice.value,
-                    año: parseInt(anioInicio.value),
+                    anio: parseInt(anioInicio.value),
                     geometria: ultimaGeometriaConsultada
                 })
             });
@@ -580,7 +580,7 @@ if (btnPdf) {
                     provincia: provincia.value,
                     distrito: distrito.value,
                     indice: indice.value,
-                    año: parseInt(anioInicio.value),
+                    anio: parseInt(anioInicio.value),
                     satelite: satelite.value,
                     geometria: ultimaGeometriaConsultada
                 })
