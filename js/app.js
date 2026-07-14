@@ -97,6 +97,11 @@ const limitesSatelites = {
     "Sentinel 2": { min: 2015, max: 2026, def: 2022 }
 };
 
+/*=======================================================================
+    SISTEMA DE ENLACE DE BACKEND (URL DE RENDER)
+=======================================================================*/
+const BASE_URL_API_REAL = "https://geovisor-uwu.onrender.com";
+
 /*==========================
     INICIALIZACIÓN
 ==========================*/
@@ -107,6 +112,10 @@ window.onload = () => {
         actualizarIndicesPorObjetivo(); 
         validarYFiltrarAniosPorSatelite(); 
         escucharCambiosTipoConsulta(); 
+        
+        // ⚡ OPTIMIZACIÓN BRUTAL: Despertar el servidor gratuito en segundo plano de inmediato
+        fetch(`${BASE_URL_API_REAL}/`).catch(() => console.log("Despertando backend..."));
+
     } catch (error) {
         console.error("⚠️ Error controlado en inicialización de recursos:", error);
     } finally {
@@ -408,11 +417,6 @@ function fusionarGeometrias(features) {
     };
 }
 
-/*=======================================================================
-    SISTEMA DE ENLACE DE BACKEND (URL DE RENDER)
-=======================================================================*/
-const BASE_URL_API_REAL = "https://geovisor-uwu.onrender.com";
-
 /*==========================
     EVENTO CONSULTAR
 ==========================*/
@@ -443,7 +447,7 @@ if (btnConsultar) {
         const loader = document.getElementById("loader");
         if (loader) loader.style.display = "flex";
 
-        // Limpieza de capas previas
+        // Limpieza inmediata de capas previas
         if (capaGeoJson && map.hasLayer(capaGeoJson)) map.removeLayer(capaGeoJson);
         if (marker && map.hasLayer(marker)) map.removeLayer(marker);
         if (capaSatelitalGEE && map.hasLayer(capaSatelitalGEE)) map.removeLayer(capaSatelitalGEE);
@@ -581,6 +585,7 @@ if (btnConsultar) {
                 { color: "#27ae60", weight: 3, opacity: 0.9, fillColor: "#2ecc71", fillOpacity: 0.15 } : 
                 { color: "#e74c3c", weight: 3, opacity: 0.9, fillColor: "#f1c40f", fillOpacity: 0.15 };
 
+            // ⚡ OPTIMIZACIÓN EN ACCIÓN: Renderizar el polígono local al instante en el mapa
             capaGeoJson = L.geoJSON(geojsonFiltrado, { style: estiloPoligono }).addTo(map);
             const limites = capaGeoJson.getBounds();
 
@@ -603,50 +608,62 @@ if (btnConsultar) {
 
             ultimaGeometriaConsultada = geometriaUnificada;
 
-            const respuestaBackend = await fetch(`${BASE_URL_API_REAL}/calcular-indice-zona`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    indice: ind,
-                    año: parseInt(anioIni),
-                    geometria: geometriaUnificada
-                })
-            });
+            // ⚡ Quitamos el loader general para que el mapa quede interactivo de inmediato
+            if (loader) loader.style.display = "none";
 
-            const resultadoBackend = await respuestaBackend.json();
+            // Ponemos los recuadros de datos en estado de espera elegante
+            if (areaTotal) areaTotal.textContent = "Calculando...";
+            if (valorProm) valorProm.textContent = "⏳...";
+            if (valorMax) valorMax.textContent = "⏳...";
+            if (valorMin) valorMin.textContent = "⏳...";
 
-            if (resultadoBackend.status === "success" && resultadoBackend.tile_url) {
-                capaSatelitalGEE = L.tileLayer(resultadoBackend.tile_url, {
-                    maxZoom: 18,
-                    attribution: 'Google Earth Engine | Geospatial Perú'
-                }).addTo(map);
-                
-                capaGeoJson.setStyle({ fillColor: "transparent", fillOpacity: 0 });
-                capaGeoJson.bringToFront();
+            // 🔥 CONSULTA ASÍNCRONA EN SEGUNDO PLANO (No bloquea la pantalla)
+            (async () => {
+                try {
+                    const respuestaBackend = await fetch(`${BASE_URL_API_REAL}/calcular-indice-zona`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            indice: ind,
+                            año: parseInt(anioIni),
+                            geometria: geometriaUnificada
+                        })
+                    });
 
-                if (areaTotal) areaTotal.textContent = (resultadoBackend.area_km2 || 0) + " km²";
-                if (valorProm) valorProm.textContent = resultadoBackend.val_prom || "0.000";
-                if (valorMax) valorMax.textContent = resultadoBackend.val_max || "0.000";
-                if (valorMin) valorMin.textContent = resultadoBackend.val_min || "0.000";
+                    const resultadoBackend = await respuestaBackend.json();
 
-                const nombreFilaDep = isAmbiental ? "Área Ambiental" : dep;
-                const nombreFilaProv = isAmbiental ? capaAmb.toUpperCase() : prov;
-                const nombreFilaDist = isAmbiental ? nomArea : dist;
+                    if (resultadoBackend.status === "success" && resultadoBackend.tile_url) {
+                        capaSatelitalGEE = L.tileLayer(resultadoBackend.tile_url, {
+                            maxZoom: 18,
+                            attribution: 'Google Earth Engine | Geospatial Perú'
+                        }).addTo(map);
+                        
+                        capaGeoJson.setStyle({ fillColor: "transparent", fillOpacity: 0 });
+                        capaGeoJson.bringToFront();
 
-                agregarTabla(nombreFilaDep, nombreFilaProv, nombreFilaDist, ind, anioIni, sat, resultadoBackend.area_km2 || "0");
-            } else {
-                generarResultadosManejoFallas();
-                const nombreFilaDep = isAmbiental ? "Área Ambiental" : dep;
-                const nombreFilaProv = isAmbiental ? capaAmb.toUpperCase() : prov;
-                const nombreFilaDist = isAmbiental ? nomArea : dist;
-                agregarTabla(nombreFilaDep, nombreFilaProv, nombreFilaDist, ind, anioIni, sat, "Error GEE");
-            }
+                        if (areaTotal) areaTotal.textContent = (resultadoBackend.area_km2 || 0) + " km²";
+                        if (valorProm) valorProm.textContent = resultadoBackend.val_prom || "0.000";
+                        if (valorMax) valorMax.textContent = resultadoBackend.val_max || "0.000";
+                        if (valorMin) valorMin.textContent = resultadoBackend.val_min || "0.000";
+
+                        const nombreFilaDep = isAmbiental ? "Área Ambiental" : dep;
+                        const nombreFilaProv = isAmbiental ? capaAmb.toUpperCase() : prov;
+                        const nombreFilaDist = isAmbiental ? nomArea : dist;
+
+                        agregarTabla(nombreFilaDep, nombreFilaProv, nombreFilaDist, ind, anioIni, sat, resultadoBackend.area_km2 || "0");
+                    } else {
+                        generarResultadosManejoFallas();
+                    }
+                } catch (err) {
+                    console.error("Error asíncrono con GEE:", err);
+                    generarResultadosManejoFallas();
+                }
+            })();
 
         } catch (error) {
-            console.error("Error en consulta:", error);
-            alert("Error de red o procesamiento con servidores GEE.");
+            console.error("Error en consulta cartográfica base:", error);
+            alert("Error de procesamiento con servidores locales.");
             generarResultadosManejoFallas();
-        } finally {
             if (loader) loader.style.display = "none";
         }
     });
