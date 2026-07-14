@@ -168,11 +168,11 @@ async function actualizarAreasEspecificas() {
     nombreArea.innerHTML = '<option value="Seleccione...">Mapeando y unificando registros espaciales...</option>';
     
     let archivosAPescar = [];
-    if (capa === "acp") archivosAPescar = ["data/acp.geojson"];
-    else if (capa === "acr") archivosAPescar = ["data/acr.geojson"];
-    else if (capa === "zona_reservada") archivosAPescar = ["data/zona_reservada.geojson"];
-    else if (capa === "anpdefinitivas") archivosAPescar = ["data/anpdefinitivas.geojson"];
-    else if (capa === "zona_de_amortiguamiento") archivosAPescar = ["data/zona_de_amortiguamiento1.geojson", "data/zona_de_amortiguamiento2.geojson"];
+    if (capa === "acp") archivosAPescar = ["acp.geojson"];
+    else if (capa === "acr") archivosAPescar = ["acr.geojson"];
+    else if (capa === "zona_reservada") archivosAPescar = ["zona_reservada.geojson"];
+    else if (capa === "anpdefinitivas") archivosAPescar = ["anpdefinitivas.geojson"];
+    else if (capa === "zona_de_amortiguamiento") archivosAPescar = ["zona_de_amortiguamiento1.geojson", "zona_de_amortiguamiento2.geojson"];
     
     try {
         let mapaItems = new Map(); // Guarda -> Nombre: { etiqueta: string, partes: número }
