@@ -151,7 +151,7 @@ function deshabilitarUbigeo(deshabilitar) {
     if (distrito) distrito.disabled = deshabilitar;
 }
 
-// Escáner Híbrido Unificador: Lee geojsons y junta sectores duplicados en el selector visual
+// Escáner Híbrido Unificador: Rutas corregidas para archivos sueltos en raíz
 async function actualizarAreasEspecificas() {
     if (!capaAmbiental || !nombreArea) return;
     
@@ -175,12 +175,12 @@ async function actualizarAreasEspecificas() {
     else if (capa === "zona_de_amortiguamiento") archivosAPescar = ["zona_de_amortiguamiento1.geojson", "zona_de_amortiguamiento2.geojson"];
     
     try {
-        let mapaItems = new Map(); // Guarda -> Nombre: { etiqueta: string, partes: número }
+        let mapaItems = new Map();
 
         for (const url of archivosAPescar) {
             const response = await fetch(url);
             if (!response.ok) {
-                console.warn(`No se pudo leer el archivo: ${url}`);
+                console.warn(`No se pudo leer el archivo suelto: ${url}`);
                 continue;
             }
             
@@ -566,7 +566,6 @@ if (btnConsultar) {
                 return;
             }
 
-            // Fusión geométrica (Soporte multizona dinámico para todas las capas fragmentadas)
             const geometriaUnificada = fusionarGeometrias(featuresFiltrados);
 
             const geojsonFiltrado = { 
@@ -604,7 +603,6 @@ if (btnConsultar) {
 
             ultimaGeometriaConsultada = geometriaUnificada;
 
-            // POST request al backend en Render (Mapeado exacto con "año" para Pydantic)
             const respuestaBackend = await fetch(`${BASE_URL_API_REAL}/calcular-indice-zona`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -626,7 +624,6 @@ if (btnConsultar) {
                 capaGeoJson.setStyle({ fillColor: "transparent", fillOpacity: 0 });
                 capaGeoJson.bringToFront();
 
-                // Muestra de valores estadísticos en las tarjetas
                 if (areaTotal) areaTotal.textContent = (resultadoBackend.area_km2 || 0) + " km²";
                 if (valorProm) valorProm.textContent = resultadoBackend.val_prom || "0.000";
                 if (valorMax) valorMax.textContent = resultadoBackend.val_max || "0.000";
