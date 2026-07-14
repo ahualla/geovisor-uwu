@@ -368,31 +368,65 @@
         </div>
 
         <div class="section-panel">
-            <div class="section-title">1. Ubicación Administrativa</div>
+            <div class="section-title">1. Enfoque Espacial de Consulta</div>
             <div class="form-group">
-                <label for="departamento">Departamento</label>
-                <select id="departamento" class="form-control">
-                    <option value="Seleccione...">Cargando...</option>
+                <label for="tipoConsulta">Modalidad de Análisis</label>
+                <select id="tipoConsulta" class="form-control">
+                    <option value="politico">División Político-Administrativa</option>
+                    <option value="conservacion">Áreas Naturales y Conservación (ANPs)</option>
                 </select>
             </div>
-            <div class="row-grid">
+        </div>
+
+        <div class="section-panel">
+            <div class="section-title">2. Límites Cartográficos</div>
+            
+            <div id="grupoPolitico">
                 <div class="form-group">
-                    <label for="provincia">Provincia</label>
-                    <select id="provincia" class="form-control">
+                    <label for="departamento">Departamento</label>
+                    <select id="departamento" class="form-control">
+                        <option value="Seleccione...">Cargando...</option>
+                    </select>
+                </div>
+                <div class="row-grid">
+                    <div class="form-group">
+                        <label for="provincia">Provincia</label>
+                        <select id="provincia" class="form-control">
+                            <option value="Seleccione...">Seleccione...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="distrito">Distrito</label>
+                        <select id="distrito" class="form-control">
+                            <option value="Seleccione...">Seleccione...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="grupoAmbiental" style="display: none;">
+                <div class="form-group">
+                    <label for="capaAmbiental">Categoría de Conservación</label>
+                    <select id="capaAmbiental" class="form-control">
                         <option value="Seleccione...">Seleccione...</option>
+                        <option value="anpdefinitivas">ANP Administración Nacional</option>
+                        <option value="acr">Áreas de Conservación Regional (ACR)</option>
+                        <option value="acp">Áreas de Conservación Privada (ACP)</option>
+                        <option value="zona_reservada">Zonas Reservadas</option>
+                        <option value="zona_de_amortiguamiento">Zonas de Amortiguamiento</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="distrito">Distrito</label>
-                    <select id="distrito" class="form-control">
-                        <option value="Seleccione...">Seleccione...</option>
+                    <label for="nombreArea">Área de Estudio Específica</label>
+                    <select id="nombreArea" class="form-control" disabled>
+                        <option value="Seleccione...">Seleccione una categoría primero...</option>
                     </select>
                 </div>
             </div>
         </div>
 
         <div class="section-panel">
-            <div class="section-title">2. Parámetros de Misión</div>
+            <div class="section-title">3. Parámetros de Misión</div>
             <div class="form-group">
                 <label for="satelite">Sensor Satelital</label>
                 <select id="satelite" class="form-control">
@@ -424,7 +458,7 @@
         </div>
 
         <div class="section-panel">
-            <div class="section-title">3. Temporalidad Análisis</div>
+            <div class="section-title">4. Temporalidad Análisis</div>
             <div class="row-grid">
                 <div class="form-group">
                     <label for="anioInicio">Año Inicial</label>
@@ -438,7 +472,7 @@
         </div>
 
         <div class="section-panel">
-            <div class="section-title">4. Exportación Científica</div>
+            <div class="section-title">5. Exportación Científica</div>
             <div class="container-descargas">
                 <button id="btnTiff" class="btn-download">💾 GeoTIFF</button>
                 <button id="btnShp" class="btn-download">📦 SHP</button>
@@ -452,7 +486,7 @@
             <button id="consultar" class="btn btn-primary">Consultar</button>
         </div>
 
-        <div class="section-title" style="padding: 20px 20px 5px 20px;">5. Historial de Consultas</div>
+        <div class="section-title" style="padding: 20px 20px 5px 20px;">6. Historial de Consultas</div>
         <div class="table-container">
             <table class="data-table">
                 <thead>
@@ -478,7 +512,7 @@
             <h4>Capa Activa GEE</h4>
             <p>Índice Espectral: <span id="indiceNombre">NDVI</span></p>
             <p>Plataforma Sensor: <span id="sensor">Landsat 5</span></p>
-            <p>Ventana Temporal: <span id="anio">2020</span></p>
+            <p>Ventana Temporal: <span id="anio">2010</span></p>
         </div>
 
         <div class="toolbar-right">
