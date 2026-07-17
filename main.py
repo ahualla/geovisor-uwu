@@ -82,10 +82,6 @@ class ConsultaMapa(BaseModel):
             raise ValueError(f"Índice '{v}' no soportado.")
         return v.upper()
 
-    @property
-    def año(self) -> int:
-        return int(self.anio)
-
 class DatosReportePDF(ConsultaMapa):
     departamento: str
     provincia: str
@@ -169,24 +165,47 @@ def obtener_paleta_y_rangos(indice_nombre):
         return ['#2b9348', '#e5e5e5', '#f4a261', '#e76f51', '#b7094c', '#510a32'], -0.25, 0.65
 
 
-# --- ENDPOINTS ORIGINALES RESTAURADOS ---
+# --- ENDPOINTS ---
 
 @app.post("/calcular-indice-zona")
 def procesar_mapa_zona(datos: ConsultaMapa):
     try:
         region_ee = ee.Geometry(datos.geometria)
-        imagen_base = obtener_imagen_por_año(datos.año, region_ee)
-        resultado_indice = calcular_todos_los_indices(imagen_base, datos.indice, datos.año)
+        imagen_base = obtener_imagen_por_año(datos.anio, region_ee)
+        resultado_indice = calcular_todos_los_indices(imagen_base, datos.indice, datos.anio)
         resultado_recortado = resultado_indice.clip(region_ee)
         
+        # --- RECUPERACIÓN Y CÁLCULO DE ESTADÍSTICAS ---
+        area_km2 = region_ee.area().divide(1000000).getInfo()
+        
+        stats = resultado_recortado.reduceRegion(
+            reducer=ee.Reducer.mean().combine(
+                reducer2=ee.Reducer.minMax(),
+                sharedInputs=True
+            ),
+            geometry=region_ee,
+            scale=30,
+            maxPixels=1e9
+        ).getInfo()
+        
+        nombre_banda = datos.indice.upper()
+        valor_promedio = stats.get(f"{nombre_banda}_mean", 0.0) or 0.0
+        valor_maximo = stats.get(f"{nombre_banda}_max", 0.0) or 0.0
+        valor_minimo = stats.get(f"{nombre_banda}_min", 0.0) or 0.0
+        # -----------------------------------------------
+
         paleta, min_val, max_val = obtener_paleta_y_rangos(datos.indice)
         map_id_dict = resultado_recortado.getMapId({'min': min_val, 'max': max_val, 'palette': paleta})
         
         return {
             "status": "success",
             "indice": datos.indice.upper(),
-            "año": datos.año,
-            "tile_url": map_id_dict['tile_fetcher'].url_format
+            "año": datos.anio,
+            "tile_url": map_id_dict['tile_fetcher'].url_format,
+            "area": round(area_km2, 2),
+            "promedio": round(valor_promedio, 3),
+            "maximo": round(valor_maximo, 3),
+            "minimo": round(valor_minimo, 3)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -196,11 +215,11 @@ def procesar_mapa_zona(datos: ConsultaMapa):
 def descargar_tiff_zona(datos: ConsultaMapa):
     try:
         region_ee = ee.Geometry(datos.geometria)
-        imagen_base = obtener_imagen_por_año(datos.año, region_ee)
-        resultado_indice = calcular_todos_los_indices(imagen_base, datos.indice, datos.año)
+        imagen_base = obtener_imagen_por_año(datos.anio, region_ee)
+        resultado_indice = calcular_todos_los_indices(imagen_base, datos.indice, datos.anio)
         resultado_recortado = resultado_indice.clip(region_ee)
         
-        scale = 10 if datos.año >= 2015 else 30
+        scale = 10 if datos.anio >= 2015 else 30
         url_descarga = resultado_recortado.getDownloadURL({
             'scale': scale,
             'crs': 'EPSG:4326',
@@ -238,7 +257,7 @@ def descargar_pdf_reporte(datos: DatosReportePDF):
         tabla_datos = [
             [Paragraph("Métrica", style_th), Paragraph("Valor", style_th)],
             [Paragraph("Índice Seleccionado", style_txt), Paragraph(datos.indice.upper(), style_txt)],
-            [Paragraph("Año", style_txt), Paragraph(str(datos.año), style_txt)],
+            [Paragraph("Año", style_txt), Paragraph(str(datos.anio), style_txt)],
         ]
         
         t = Table(tabla_datos, colWidths=[240, 240])
@@ -255,7 +274,7 @@ def descargar_pdf_reporte(datos: DatosReportePDF):
         return StreamingResponse(
             buffer, 
             media_type="application/pdf", 
-            headers={"Content-Disposition": f"attachment; filename=REPORTE_{datos.indice.upper()}_{datos.año}.pdf"}
+            headers={"Content-Disposition": f"attachment; filename=REPORTE_{datos.indice.upper()}_{datos.anio}.pdf"}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -270,7 +289,7 @@ def descargar_shp_data(datos: DatosReportePDF):
             'PROVINCIA': datos.provincia,
             'DISTRITO': datos.distrito,
             'INDICE': datos.indice.upper(),
-            'ANIO': datos.año
+            'ANIO': datos.anio
         })
         
         fc = ee.FeatureCollection([feature])
@@ -293,11 +312,13 @@ def descargar_shp_data(datos: DatosReportePDF):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# --- ENRUTAMIENTO ESTÁTICO ---
+# --- ENRUTAMIENTO ESTÁTICO CORREGIDO ---
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     if os.path.exists("index.html"):
         return FileResponse("index.html")
     return "<h1>✔ Servidor Backend Activo</h1>"
 
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+# Montamos la carpeta estática solo si existe y apuntando a una subruta dedicada para evitar conflictos colosales
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
