@@ -59,21 +59,23 @@ except Exception as e:
     print("❌ Error de conexión con Earth Engine:", str(e))
 
 
-# --- MODELOS DE DATOS ---
+# --- MODELOS DE DATOS (Mapeo estricto y flexible frontend/backend) ---
 INDICES_SOPORTADOS = ["NDVI", "EVI", "SAVI", "GCI", "MSAVI", "ARVI", "NDRE", "NDWI", "MNDWI", "NDMI", "LSWI", "NDSI", "BAI", "BSI", "NBR", "CRI"]
 
 class ConsultaMapa(BaseModel):
     indice: str
-    anio: Union[int, str] = Field(..., alias="año")
+    anio: Any = Field(..., alias="año")  # Mapea dinámicamente "año" desde JS a la variable local "anio"
     geometria: Dict[str, Any]
 
     @field_validator('anio', mode='before')
     @classmethod
     def limpiar_anio(cls, v):
         try:
+            if isinstance(v, dict): 
+                return int(list(v.values())[0])
             return int(v)
         except (ValueError, TypeError):
-            raise ValueError("El año debe ser un número entero.")
+            raise ValueError("El año debe ser un número entero válido.")
 
     @field_validator('indice')
     @classmethod
@@ -82,7 +84,10 @@ class ConsultaMapa(BaseModel):
             raise ValueError(f"Índice '{v}' no soportado.")
         return v.upper()
 
-class DatosReportePDF(ConsultaMapa):
+class DatosReportePDF(BaseModel):
+    indice: str
+    anio: Any = Field(..., alias="año")
+    geometria: Dict[str, Any]
     departamento: str
     provincia: str
     distrito: str
@@ -175,7 +180,7 @@ def procesar_mapa_zona(datos: ConsultaMapa):
         resultado_indice = calcular_todos_los_indices(imagen_base, datos.indice, datos.anio)
         resultado_recortado = resultado_indice.clip(region_ee)
         
-        # --- CÁLCULO DE ESTADÍSTICAS GEOGRÁFICAS EN TIEMPO REAL ---
+        # --- CÁLCULO DE ESTADÍSTICAS ---
         area_calculada = region_ee.area().divide(1000000).getInfo()
         
         stats = resultado_recortado.reduceRegion(
@@ -197,16 +202,15 @@ def procesar_mapa_zona(datos: ConsultaMapa):
         valor_maximo = stats.get(f"{nombre_banda}_max", 0.0)
         valor_minimo = stats.get(f"{nombre_banda}_min", 0.0)
         
-        # Limpieza y tratamiento preventivo de nulos
+        # Ajuste preventivo frente a nulos
         valor_promedio = 0.0 if valor_promedio is None else valor_promedio
         valor_maximo = 0.0 if valor_maximo is None else valor_maximo
         valor_minimo = 0.0 if valor_minimo is None else valor_minimo
-        # ----------------------------------------------------------
 
         paleta, min_val, max_val = obtener_paleta_y_rangos(datos.indice)
         map_id_dict = resultado_recortado.getMapId({'min': min_val, 'max': max_val, 'palette': paleta})
         
-        # RETORNO ASOCIADO FIELMENTE A LAS LLAVES DE TU APP.JS
+        # Diccionario estructurado idénticamente a las llaves asociadas de app.js
         return {
             "status": "success",
             "indice": datos.indice.upper(),
