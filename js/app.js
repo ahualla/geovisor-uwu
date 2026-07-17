@@ -556,7 +556,7 @@ function agregarTabla(dep, prov, dist, ind, anioIni, sat, areaKm2) {
 }
 
 function generarResultadosManejoFallas() {
-    if (areaTotal) areaTotal.textContent = "Límite Excedido";
+    if (areaTotal) areaTotal.textContent = "Sin datos / Nubes";
     if (valorProm) valorProm.textContent = "0.000";
     if (valorMax) valorMax.textContent = "0.000";
     if (valorMin) valorMin.textContent = "0.000";
